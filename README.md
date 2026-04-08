@@ -1,4 +1,4 @@
-# Vibe Audit
+# vibe-audit Skill
 
 A static codebase audit skill for Claude that generates a styled, interactive HTML report. Analyzes architecture, code quality, security hygiene, and AI-generated technical debt using Clean Code principles and a "Vibe-Coding" pitfall detector.
 
@@ -31,10 +31,10 @@ mkdir -p .claude/skills
 cp -r vibe-audit .claude/skills/
 ```
 
-### Claude Code Plugin Marketplace
+### skills.sh
 
-```
-/plugin install vibe-audit@KangweiLIAO/vibe-audit
+```bash
+npx skills add KangweiLIAO/skill-vibe-audit
 ```
 
 ### Manual (any agent that supports SKILL.md)
@@ -60,7 +60,9 @@ What's wrong with this project? Check architecture and patterns.
 Claude will:
 
 1. **Discover** the file tree, configs, and README without reading all source files.
-2. **Gate** the scope — halt and ask you if the codebase is ambiguous or has >80 source files.
+2. **Gate** the scope — detects your environment automatically.
+- In Claude Code/Cowork or any agent with sub-agent support, sub-agents run categories in parallel with no file-count cap.
+- In Claude.ai or agents without sub-agent support, falls back to sequential analysis and halts if the codebase exceeds 80 source files.
 3. **Let you pick** which audit categories to run (defaults to Tech Stack, Structure, Security).
 4. **Analyze** module by module through two lenses: Robert C. Martin's Clean Code principles and AI "Vibe-Coding" pitfall detection.
 5. **Generate** a `findings.json`, validate it, and render `audit-report.html`.
@@ -94,12 +96,22 @@ Catches AI-specific technical debt that traditional linters miss:
 - **Deep Architectural Incoherence** — mixing callbacks with async/await, or multiple design patterns in the same module
 - **Verbose Debt** — redundant guard clauses and hyper-fragmented files from over-cautious AI generation
 
+## Execution Modes
+
+| Environment | Strategy | File Cap |
+|---|---|---|
+| Parallel-capable agents | Parallel sub-agents (Reader + one per category) | None |
+| Sequential-only agents | Single context window | 80 files |
+
 ## Project Structure
 
 ```
 vibe-audit/
 ├── SKILL.md                          # Skill instructions (153 lines)
 ├── README.md                         # This file
+├── agents/
+│   ├── reader.md                     # File-reading sub-agent spec
+│   └── category-auditor.md           # Per-category audit sub-agent spec
 ├── scripts/
 │   └── generate_audit_report.py      # Report generator with --validate-only
 ├── assets/

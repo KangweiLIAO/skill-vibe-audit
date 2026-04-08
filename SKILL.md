@@ -7,6 +7,17 @@ description: Performs a comprehensive, platform-agnostic static audit of a codeb
 
 Perform a comprehensive, platform-agnostic static audit of the entire codebase. Focus on code quality, consistency, architecture, and security standards using established software engineering principles.
 
+## Phase 0: Environment Check
+
+Determine whether your environment supports parallel sub-agent execution:
+
+- **Parallel-capable** (e.g. Claude Code or any agent with sub-agent support):
+  Use the parallel strategy in Step 4. No file-count cap applies.
+- **Sequential-only** (e.g. Claude.ai, or agents without sub-agent support):
+  Proceed through phases sequentially. Notify the user if the codebase exceeds 80 files.
+
+Store this as `ENV = parallel | sequential`.
+
 ## Phase 1: Reconnaissance & Gatekeeping
 
 ### Step 1: Discovery (Read Light First)
@@ -19,11 +30,11 @@ Do NOT read all source files immediately. Instead:
 ### Step 2: Scope & Gating (CRITICAL HALT)
 Evaluate the discovery data. You **MUST HALT** and ask the user for input if either of these conditions are met:
 - **Ambiguity:** The framework, scale, or project purpose cannot be deduced from the README/configs.
-- **Scale Exceeded:** The codebase contains >80 source files. (Warn the user about context window limits and ask them to specify 2-3 core domains or folders to focus the audit on).
-
-If the codebase is ≤80 files, decide your approach automatically:
-- **Small (≤30 files):** Audit all files.
-- **Medium (31–80 files):** Audit core/business-logic modules fully; scan peripheral modules (tests, config) for structure only.
+- If `ENV = parallel`, the 80-file cap does not apply — sub-agents each handle their own context. Skip straight to Step 3.
+- If `ENV = sequential` and the codebase is ≤80 files, decide automatically:
+    - **Small (≤30 files):** Audit all files.
+    - **Medium (31–80 files):** Audit core/business-logic modules fully; scan peripheral modules (tests, config) for structure only.
+- If `ENV = sequential` and **files >80**: halt and ask the user to narrow scope.
 
 ### Step 3: Audit Category Selection
 Present the user with the available audit categories and let them choose which to include. Default recommendation is 1-3.
@@ -39,7 +50,18 @@ Present the user with the available audit categories and let them choose which t
 ## Phase 2: Targeted Clean Code & Vibe-Coding Audit
 
 ### Step 4: Chunked Codebase Analysis
-Analyze the codebase one domain or top-level module at a time. While checking the categories the user selected, evaluate the code through two primary lenses:
+
+**If `ENV = parallel`:**
+1. Spawn one **Reader agent** (see `agents/reader.md`) to walk the file tree and emit a shared `codebase-context.json`.
+2. For each selected audit category, spawn one **Category agent** (see `agents/category-auditor.md`) in parallel. Pass it: the shared context + its assigned category + the two lenses below.
+3. Collect all findings JSONs and merge into the `categories` object.
+
+**If `ENV = sequential`:**
+Analyze the codebase one domain or top-level module at a time, applying the lenses below across all selected categories.
+
+---
+
+*Both paths use these lenses:*
 
 **Lens A: Robert C. Martin's Clean Code Principles**
 - Meaningful naming (intention-revealing, no disinformation).
